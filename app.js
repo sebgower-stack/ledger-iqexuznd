@@ -1,5 +1,5 @@
 'use strict';
-const VERSION='2 Nov, 11:14am';
+const VERSION='2 Nov, 11:16am';
 const K='ledger.vault.v1',KA='ledger.attempts',ITER=600000,IDLE_MS=5*60*1000;
 const $=s=>document.querySelector(s),enc=new TextEncoder(),dec=new TextDecoder();
 const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -148,4 +148,4 @@ function start(){$('#lock').classList.add('hide');$('#app').classList.remove('hi
 addEventListener('resize',()=>KEY&&view==='dash'&&render());
 $('#ver').textContent='Updated '+VERSION;applyTheme();lockUI();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').then(r=>{setInterval(()=>r.update(),60000);document.addEventListener('visibilitychange',()=>!document.hidden&&r.update())}).catch(()=>{});
- let rl=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!rl&&!KEY){rl=true;location.reload()}});}
+ const hadCtl=!!navigator.serviceWorker.controller;let rl=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!rl&&!KEY&&!$('#lockbtn').disabled&&!$('#pc1').value){rl=true;location.reload()}});}
