@@ -1,0 +1,28 @@
+<!doctype html><html lang="en-NZ"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0f3d2e"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Ledger">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="app.css"><title>Ledger</title></head><body>
+<div id="lock" class="lock"><div class="lockbox">
+ <div class="logo"><img src="icon-192.png" alt=""></div><h1>Ledger</h1>
+ <p id="lockmsg" class="muted"></p>
+ <form id="lockform"><input id="pc1" type="password" inputmode="text" autocomplete="current-password" placeholder="Passcode" required>
+ <input id="pc2" type="password" autocomplete="new-password" placeholder="Confirm passcode" class="hide">
+ <button id="lockbtn" class="btn primary">Unlock</button></form>
+ <p id="lockerr" class="err"></p>
+ <p id="lockwarn" class="warn hide">⚠️ Your passcode is the only key. If you forget it, the data <b>cannot be recovered</b> by anyone. Keep an encrypted backup (Settings → Export).</p>
+ <p class="tiny muted">Encrypted on this device only · AES‑256‑GCM</p>
+ <button id="importfirst" class="link hide">Restore from an encrypted backup</button>
+</div></div>
+<div id="app" class="hide">
+ <header><div><h1>Ledger</h1><div id="ver" class="tiny muted"></div></div>
+ <div class="hdr"><button id="theme" class="icon" aria-label="Theme">◐</button><button id="lockNow" class="icon" aria-label="Lock">🔒</button></div></header>
+ <main id="view"></main>
+ <nav><button data-v="dash" class="on">📊<span>Overview</span></button><button data-v="out">⬆️<span>Out</span></button><button data-v="in">⬇️<span>In</span></button><button data-v="tx">🧾<span>One-offs</span></button><button data-v="set">⚙️<span>Settings</span></button></nav>
+</div>
+<dialog id="dlg"><form id="dform" method="dialog"></form></dialog>
+<input type="file" id="file" accept=".json,application/json" class="hide">
+<script src="app.js"></script></body></html>
