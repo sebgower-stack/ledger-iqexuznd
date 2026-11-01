@@ -1,5 +1,5 @@
 'use strict';
-const VERSION='2 Nov, 11:16am';
+const VERSION='2 Nov, 11:21am';
 const K='ledger.vault.v1',KA='ledger.attempts',ITER=600000,IDLE_MS=5*60*1000;
 const $=s=>document.querySelector(s),enc=new TextEncoder(),dec=new TextDecoder();
 const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -113,10 +113,11 @@ function txs(V){const l=[...S.tx].sort((a,b)=>b.date.localeCompare(a.date));
  V.querySelectorAll('.row').forEach(r=>r.onclick=()=>editTx(S.tx.find(x=>x.id===r.dataset.id)));V.querySelector('.fab').onclick=()=>editTx({id:uid(),type:'out',name:'',amount:'',date:new Date().toLocaleDateString('en-CA'),notes:''},true);}
 function settings(V){V.innerHTML=`<section class="card"><h2>Current balance</h2><input id="bal" inputmode="decimal" placeholder="e.g. 5000" value="${esc(S.balance)}"><div class="tiny muted">Starting point for the 12‑month projection.</div></section>
  <section class="card"><h2>Encrypted backup</h2><p class="tiny muted">The file stays encrypted with your passcode. Save it to iCloud/Drive, or import it on Shelby’s phone (same passcode).</p><div class="btns"><button id="exp" class="btn">Export backup</button><button id="imp" class="btn">Import backup</button></div></section>
+ <section class="card"><h2>Import starter figures</h2><p class="tiny muted">Merge a plain (unencrypted) Ledger figures .json into your data. Items with the same name are updated; new ones are added. It’s encrypted on save as usual.</p><button id="impStart" class="btn">Import starter figures</button><p class="warn mt">Delete the file after importing — it isn’t encrypted.</p></section>
  <section class="card"><h2>Passcode</h2><button id="chg" class="btn">Change passcode</button><p class="warn mt">Forgotten passcode = data can’t be recovered. Keep a backup.</p></section>
  <section class="card"><h2>Privacy</h2><p class="tiny">All data is stored only on this device, encrypted with AES‑256‑GCM. The key is derived from your passcode (PBKDF2‑SHA256, ${ITER.toLocaleString()} iterations, random salt) and never stored. No analytics, no servers, no third‑party code. Locks when you leave the app or after 5 minutes idle.</p></section>
  <section class="card"><button id="wipe" class="btn danger">Erase all data on this device</button></section><p class="tiny muted">Version ${VERSION}</p>`;
- $('#bal').onchange=e=>{S.balance=e.target.value;save()};$('#exp').onclick=exportB;$('#imp').onclick=()=>$('#file').click();$('#chg').onclick=changePass;
+ $('#bal').onchange=e=>{S.balance=e.target.value;save()};$('#exp').onclick=exportB;$('#imp').onclick=()=>$('#file').click();$('#impStart').onclick=()=>$('#sfile').click();$('#chg').onclick=changePass;
  $('#wipe').onclick=()=>{if(confirm('Erase everything on this device? This cannot be undone.')){localStorage.removeItem(K);lock()}};}
 
 // ---- dialogs ----
@@ -138,6 +139,24 @@ async function exportB(){await save();const blob=new Blob([localStorage.getItem(
 $('#file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const b=JSON.parse(await f.text());if(b.app!=='ledger'||!b.ct)throw 0;
  const p=prompt('Passcode for this backup:');if(p==null)return;const r=await open(b,p);if(KEY&&!confirm('Replace the data on this device with the backup?'))return;
  localStorage.setItem(K,JSON.stringify(b));KEY=r.key;SALT=r.salt;S=r.data;start();}catch{alert('Could not open that backup (wrong passcode or not a Ledger file).')}};
+function validStarter(d){const isD=x=>x===''||/^\d{4}-\d{2}-\d{2}$/.test(x),isA=x=>x===''||(isFinite(parseFloat(x))&&parseFloat(x)>=0);
+ if(!d||typeof d!=='object'||Array.isArray(d))throw new Error('Not a JSON object.');
+ if(d.app!=='ledger-starter'||d.v!==1)throw new Error('Missing "app":"ledger-starter" / "v":1.');
+ if(!Array.isArray(d.items)||!d.items.length||d.items.length>500)throw new Error('"items" must be a non-empty list.');
+ if(d.balance!=null&&!isA(String(d.balance)))throw new Error('Bad balance.');
+ return d.items.map((it,n)=>{const e=m=>{throw new Error(`Item ${n+1}: ${m}`)};
+  if(!it||typeof it!=='object')e('not an object');if(!['in','out'].includes(it.type))e('type must be in/out');
+  if(typeof it.name!=='string'||!it.name.trim()||it.name.length>120)e('name required');if(!FREQ[it.freq])e('bad freq');
+  const a=String(it.amount??''),nx=String(it.next??''),no=String(it.notes??'');if(!isA(a))e('bad amount');if(!isD(nx))e('next must be YYYY-MM-DD');if(no.length>500)e('notes too long');
+  return{id:uid(),type:it.type,name:it.name.trim(),amount:a,freq:it.freq,next:nx,notes:no};});}
+$('#sfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!KEY)return;
+ try{if(f.size>200000)throw new Error('File too large.');const d=JSON.parse(await f.text());const items=validStarter(d);
+  const drop=confirm(`Import ${items.length} items?\n\nOK = also remove empty placeholder items (no amount) that aren’t in the file.\nCancel = keep them.`);
+  let up=0,add=0;items.forEach(n=>{const m=S.items.find(i=>i.type===n.type&&i.name.trim().toLowerCase()===n.name.toLowerCase());if(m){Object.assign(m,{amount:n.amount,freq:n.freq,next:n.next,notes:n.notes});up++}else{S.items.push(n);add++}});
+  if(drop){const keep=new Set(items.map(n=>n.type+'|'+n.name.toLowerCase()));S.items=S.items.filter(i=>num(i.amount)||keep.has(i.type+'|'+i.name.trim().toLowerCase()));}
+  if(d.balance!=null&&d.balance!=='')S.balance=String(d.balance);
+  await save();view='dash';render();alert(`Imported: ${up} updated, ${add} added. Now delete the file.`);}
+ catch(x){alert('Import failed: '+(x.message||'not valid JSON'))}};
 $('#importfirst').onclick=()=>$('#file').click();
 
 // ---- shell ----
